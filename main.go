@@ -43,9 +43,15 @@ func init() {
 
 	flag.Parse()
 
-	l, _ := zap.NewProduction()
-	defer l.Sync()
-	logger = l.Sugar()
+	if debug, ok := os.LookupEnv("DEBUG"); ok && debug == "true" {
+		l, _ := zap.NewProduction()
+		defer l.Sync()
+		logger = l.Sugar()
+	} else {
+		l, _ := zap.NewDevelopment()
+		defer l.Sync()
+		logger = l.Sugar()
+	}
 
 	logger.Info("Starting terraform connector")
 	logger.Info("Installing terraform on machine")

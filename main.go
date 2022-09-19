@@ -1,9 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 
@@ -72,6 +77,15 @@ func main() {
 
 	r := gin.Default()
 
+	r.Use(func(c *gin.Context) {
+		err := verifyHmac(c)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			return
+		}
+		c.Next()
+	})
+
 	// set metadata for request
 	r.Use(func(c *gin.Context) {
 		c.Set("logger", logger)
@@ -115,6 +129,30 @@ func actionHandler(c *gin.Context) (err error) {
 	err = portClient.PatchActionRun(c, body.Context.RunID, port.ActionStatusSuccess)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func verifyHmac(c *gin.Context) (err error) {
+	signature := c.GetHeader("x-port-signature")
+	timestamp := c.GetHeader("x-port-timestamp")
+	if signature == "" {
+		return fmt.Errorf("missing x-port-signature")
+	}
+	// trim 'v1,...'
+	signature = signature[3:]
+	body, err := c.GetRawData()
+	if err != nil {
+		return err
+	}
+	// let other consumers read from body
+	c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+	fmt.Println(string(body))
+	sign := hmac.New(sha256.New, []byte(PORT_CLIENT_SECRET))
+	sign.Write([]byte(fmt.Sprintf("%s.%s", timestamp, string(body))))
+	expected := base64.StdEncoding.EncodeToString(sign.Sum(nil))
+	if expected != signature {
+		return fmt.Errorf("invalid signature")
 	}
 	return nil
 }

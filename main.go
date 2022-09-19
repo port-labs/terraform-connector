@@ -26,6 +26,16 @@ var (
 )
 
 func init() {
+	if debug, ok := os.LookupEnv("DEBUG"); ok && debug == "true" {
+		l, _ := zap.NewDevelopment()
+		defer l.Sync()
+		logger = l.Sugar()
+	} else {
+		l, _ := zap.NewProduction()
+		defer l.Sync()
+		logger = l.Sugar()
+	}
+
 	flag.StringVar(&PORT, "port", "8080", "Port to listen on")
 	flag.StringVar(&TEMPLATES_FOLDER, "templates", "templates", "Folder containing terraform templates")
 	PORT_CLIENT_ID, _ = os.LookupEnv("PORT_CLIENT_ID")
@@ -42,16 +52,6 @@ func init() {
 	}
 
 	flag.Parse()
-
-	if debug, ok := os.LookupEnv("DEBUG"); ok && debug == "true" {
-		l, _ := zap.NewProduction()
-		defer l.Sync()
-		logger = l.Sugar()
-	} else {
-		l, _ := zap.NewDevelopment()
-		defer l.Sync()
-		logger = l.Sugar()
-	}
 
 	logger.Info("Starting terraform connector")
 	logger.Info("Installing terraform on machine")

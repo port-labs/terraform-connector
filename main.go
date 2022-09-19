@@ -18,8 +18,11 @@ var (
 	TEMPLATES_FOLDER   string
 	PORT_CLIENT_ID     string
 	PORT_CLIENT_SECRET string
+	PORT_BASE_URL      string
 
-	logger *zap.SugaredLogger
+	logger     *zap.SugaredLogger
+	portClient *port.Client
+	tf         *terraform.Terraform
 )
 
 func init() {
@@ -33,22 +36,34 @@ func init() {
 	if PORT_CLIENT_SECRET == "" {
 		logger.Fatal("PORT_CLIENT_SECRET is not set")
 	}
+	PORT_BASE_URL, _ = os.LookupEnv("PORT_BASE_URL")
+	if PORT_BASE_URL == "" {
+		PORT_BASE_URL = "https://api.getport.io"
+	}
 
 	flag.Parse()
-}
 
-func main() {
 	l, _ := zap.NewProduction()
 	defer l.Sync()
-	logger := l.Sugar()
+	logger = l.Sugar()
 
 	logger.Info("Starting terraform connector")
 	logger.Info("Installing terraform on machine")
-	tf := terraform.Terraform{}
+	tf = terraform.NewTerraform(logger)
 	err := tf.Install(context.Background())
 	if err != nil {
 		logger.Fatalf("Failed to install terraform: %v", err)
 	}
+	portClient = port.New(PORT_BASE_URL)
+	logger.Info("Authenticating with Port")
+	_, err = portClient.Authenticate(context.Background(), PORT_CLIENT_ID, PORT_CLIENT_SECRET)
+	if err != nil {
+		logger.Fatalf("failed to authenticate with Port: %v", err)
+	}
+}
+
+func main() {
+
 	r := gin.Default()
 
 	// set metadata for request
@@ -58,26 +73,11 @@ func main() {
 		c.Next()
 	})
 
-	r.POST("/action", func(c *gin.Context) {
-		body := port.ActionBody{}
-		err := c.BindJSON(&body)
+	r.POST("/", func(c *gin.Context) {
+		err := actionHandler(c)
 		if err != nil {
-			logger.Errorf("Failed to parse request body: %v", err)
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-		switch body.Payload.Action.Identifier {
-		case "CREATE":
-			err = tf.Apply(&body, c)
-		case "DELETE":
-			err = tf.Destroy(&body, c)
-		default:
-			logger.Errorf("Unknown action: %s", body.Payload.Action.Identifier)
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Unknown action: %s", body.Payload.Action.Identifier)})
-		}
-		if err != nil {
-			logger.Errorf("Failed to apply terraform: %v", err)
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			logger.Errorf("%v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{
@@ -86,4 +86,29 @@ func main() {
 	})
 
 	r.Run(fmt.Sprintf(":%s", PORT))
+}
+
+func actionHandler(c *gin.Context) (err error) {
+	body := port.ActionBody{}
+	err = c.BindJSON(&body)
+	if err != nil {
+		return err
+	}
+	switch body.Payload.Action.Trigger {
+	case "CREATE":
+		err = tf.Apply(&body, c)
+	case "DELETE":
+		err = tf.Destroy(&body, c)
+	default:
+		return fmt.Errorf("unknown action: %s", body.Payload.Action.Identifier)
+	}
+	if err != nil {
+		portClient.PatchActionRun(c, body.Context.RunID, port.ActionStatusFailure)
+		return err
+	}
+	err = portClient.PatchActionRun(c, body.Context.RunID, port.ActionStatusSuccess)
+	if err != nil {
+		return err
+	}
+	return nil
 }

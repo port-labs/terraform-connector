@@ -25,6 +25,12 @@ type Terraform struct {
 	logger *zap.SugaredLogger
 }
 
+func NewTerraform(logger *zap.SugaredLogger) *Terraform {
+	return &Terraform{
+		logger: logger,
+	}
+}
+
 func randomLetters(n int) string {
 	var letter = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 	b := make([]rune, n)
@@ -52,8 +58,8 @@ func (t *Terraform) Install(ctx context.Context) error {
 // to keep the same state file between actions on the same entity, we use the entity id as the key
 // or generate a random key if the entity does not exist yet.
 func getStateKey(actionBody *port.ActionBody) string {
-	if actionBody.Context.Entity.ID != "" {
-		return actionBody.Context.Entity.ID
+	if actionBody.Context.Entity != "" {
+		return actionBody.Context.Entity
 	}
 	return "e_" + randomLetters(10)
 }
@@ -92,7 +98,12 @@ func (t *Terraform) Apply(actionBody *port.ActionBody, ctx context.Context) erro
 	if err != nil {
 		return fmt.Errorf("failed to run terraform init: %v", err)
 	}
-	varsFilepath, err := t.createVarsFile(workDir, stateKey, actionBody.Context.Blueprint, actionBody.Payload.Properties)
+	props := lo.Assign(map[string]any{}, actionBody.Payload.Properties, map[string]any{
+		"entity_identifier": stateKey,
+		"blueprint":         actionBody.Context.Blueprint,
+		"run_id":            actionBody.Context.RunID,
+	})
+	varsFilepath, err := t.createVarsFile(workDir, props)
 	if err != nil {
 		return fmt.Errorf("failed to create vars file: %v", err)
 	}
@@ -103,15 +114,8 @@ func (t *Terraform) Apply(actionBody *port.ActionBody, ctx context.Context) erro
 	return nil
 }
 
-func (t *Terraform) createVarsFile(workDir, stateKey, blueprint string, properties map[string]any) (string, error) {
-	vars := map[string]any{
-		"entity_identifier": stateKey,
-		"blueprint":         blueprint,
-	}
-	for k, v := range properties {
-		vars[k] = v
-	}
-	b, err := json.Marshal(vars)
+func (t *Terraform) createVarsFile(workDir string, properties map[string]any) (string, error) {
+	b, err := json.Marshal(properties)
 	if err != nil {
 		return "", err
 	}
@@ -157,7 +161,7 @@ func (t *Terraform) loadTemplateTF(actionBody *port.ActionBody, templateFolder s
 }
 
 func (t *Terraform) Destroy(actionBody *port.ActionBody, ctx context.Context) error {
-	stateKey := actionBody.Context.Entity.ID
+	stateKey := actionBody.Context.Entity
 	if stateKey == "" {
 		return fmt.Errorf("entity id is empty, cannot destroy")
 	}
@@ -185,7 +189,12 @@ func (t *Terraform) Destroy(actionBody *port.ActionBody, ctx context.Context) er
 	if err != nil {
 		return fmt.Errorf("failed to run terraform init: %v", err)
 	}
-	varsFilepath, err := t.createVarsFile(workDir, stateKey, actionBody.Context.Blueprint, actionBody.Payload.Properties)
+	props := lo.Assign(map[string]any{}, actionBody.Payload.Properties, map[string]any{
+		"entity_identifier": stateKey,
+		"blueprint":         actionBody.Context.Blueprint,
+		"run_id":            actionBody.Context.RunID,
+	})
+	varsFilepath, err := t.createVarsFile(workDir, props)
 	if err != nil {
 		return fmt.Errorf("failed to create vars file: %v", err)
 	}

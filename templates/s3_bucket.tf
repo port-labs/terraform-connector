@@ -16,6 +16,7 @@ resource "port-labs_entity" "bucket" {
     name = "url"
     value = "https://s3.console.aws.amazon.com/s3/buckets/${aws_s3_bucket.bucket.bucket}"
   }
+  run_id = var.run_id
   blueprint = var.blueprint
   identifier = var.entity_identifier
   title = "Bucket ${aws_s3_bucket.bucket.bucket}"

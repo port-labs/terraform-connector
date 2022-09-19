@@ -6,7 +6,7 @@ terraform {
     }
     port-labs = {
       source = "port-labs/port-labs"
-      version = "~> 0.4.0"
+      version = "~> 0.4.6"
     }
   }
   backend "s3" {
@@ -30,4 +30,9 @@ variable "blueprint" {
 variable "entity_identifier" {
   type = string
   description = "identifier of entity"
+}
+
+variable "run_id" {
+  type = string
+  description = "identifier of action run"
 }

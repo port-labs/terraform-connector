@@ -18,5 +18,6 @@ COPY --from=builder /app/server /app/server
 COPY main.tf /app/main.tf
 COPY templates /app/templates
 
+WORKDIR /app
 # Run the web service on container startup.
-CMD ["/app/server"]
+CMD ["./server"]

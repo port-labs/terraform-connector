@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/base64"
 	"flag"
 	"fmt"
@@ -151,7 +152,7 @@ func verifyHmac(c *gin.Context) (err error) {
 	sign := hmac.New(sha256.New, []byte(PORT_CLIENT_SECRET))
 	sign.Write([]byte(fmt.Sprintf("%s.%s", timestamp, string(body))))
 	expected := base64.StdEncoding.EncodeToString(sign.Sum(nil))
-	if expected != signature {
+	if subtle.ConstantTimeCompare([]byte(signature), []byte(expected)) == 0 {
 		return fmt.Errorf("invalid signature")
 	}
 	return nil

@@ -55,7 +55,7 @@ Keep the forwarding URL and we will use it later.
 Next, we will deploy this project as a docker container, run the following:
 ```shell
 docker run \
-  -e PORT_CLIENT_ID=<PORT_CLIENT_ID> \            
+  -e PORT_CLIENT_ID=<PORT_CLIENT_ID> \
   -e PORT_CLIENT_SECRET=<PORT_CLIENT_SECRET> \
   -e AWS_ACCESS_KEY_ID=<AWS_ACCESS_KEY_ID> \
   -e AWS_SECRET_ACCESS_KEY=<AWS_SECRET_ACCESS_KEY> \

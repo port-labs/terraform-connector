@@ -64,7 +64,7 @@ docker run \
   -e AWS_SESSION_TOKEN=<AWS_SESSION_TOKEN> \
   -e DEBUG=true \
   -p 8080:8080 \
-  -it hedwigz/webhook-terraform:v0.1
+  -it hedwigz/webhook-terraform:v0.2
 ```
 
 Now we have a running server that gets webhook request from Port and applies them to terraform files!  

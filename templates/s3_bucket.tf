@@ -43,7 +43,7 @@ variable "bucket_name" {
 variable "bucket_acl" {
   type = string
   default = "private"
-  description = "The name of the bucket"
+  description = "The canned ACL of the bucket"
 }
 variable "tags" {
   type = map(string)

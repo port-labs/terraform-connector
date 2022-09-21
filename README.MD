@@ -35,6 +35,7 @@ In the following example I'll use ngrok, run:
 ```shell
 ngrok http 8080
 ```
+
 and you should get a forwarding URL:
 ```shell
 ngrok
@@ -50,6 +51,7 @@ Forwarding                    https://1234-5678-9101-112-1314-1516-abcd-efgh-ijk
 Connections                   ttl     opn     rt1     rt5     p50     p90                                                                
                               79      0       0.00    0.00    4.91    31.99                                               
 ```
+
 Keep the forwarding URL and we will use it later.  
   
 Next, we will deploy this project as a docker container, run the following:
@@ -64,6 +66,7 @@ docker run \
   -p 8080:8080 \
   -it hedwigz/webhook-terraform:v0.1
 ```
+
 Now we have a running server that gets webhook request from Port and applies them to terraform files!  
   
 Next, let's set up a blueprint for an S3 bucket on Port. This can be achieved by using the web ui or using the [Port's terraform provider](https://docs.getport.io/integrations/terraform). We will stick to the web ui for now - go to Blueprints page and create a new blueprint
@@ -108,10 +111,13 @@ Enter the following JSON:
   "relations": {}
 }
 ```
+
 Press the `save` button and you should see the Bucket blueprint added to the screen:
 ![blueprint created](images/Screen%20Shot%202022-09-19%20at%2019.25.03.png)
+
 Next, we want to create an action that will create buckets from the UI. For this, expand the AWS Bucket blueprint and press the `Edit actions` button:
 ![Edit actions](images/Screen%20Shot%202022-09-19%20at%2019.28.47.png)
+
 Then, paste the following action configuration:
 > **_NOTE:_**  replace `<your ngrok forwarding URL>` with the URL you got earlier
 ```json
@@ -151,6 +157,7 @@ It's time to test our action, go to `AWS Buckets` page on Port and trigger the `
 
 Fill in the form and press `Create`:
 ![Create Bucket Form](images/Screen%20Shot%202022-09-20%20at%2014.07.34.png)
+
 This will trigger the webhook which will pass the action parameters to the forwarding URL which will forward the request to our web server. Then, our web server will apply the parameters to the terraform files and call `terraform apply` which will create the bucket for us, and update port that the action succeeded and create an entity of that bucket.  
 Similarly, to support destroy and change ACL operations, add the following action configuration:
 ```json

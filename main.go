@@ -116,7 +116,7 @@ func actionHandler(c *gin.Context) (err error) {
 		return err
 	}
 	switch body.Payload.Action.Trigger {
-	case "CREATE":
+	case "CREATE", "DAY-2":
 		err = tf.Apply(&body, c)
 	case "DELETE":
 		err = tf.Destroy(&body, c)

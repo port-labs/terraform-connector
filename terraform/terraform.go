@@ -5,11 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"os"
 	"path"
+	"strings"
 	"text/template"
 
+	"github.com/google/uuid"
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/hc-install/product"
 	"github.com/hashicorp/hc-install/releases"
@@ -31,13 +32,9 @@ func NewTerraform(logger *zap.SugaredLogger) *Terraform {
 	}
 }
 
-func randomLetters(n int) string {
-	var letter = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letter[rand.Intn(len(letter))]
-	}
-	return string(b)
+func genUUID(len int) string {
+	id := uuid.New()
+	return strings.Replace(id.String(), "-", "", -1)[:len]
 }
 
 func (t *Terraform) Install(ctx context.Context) error {
@@ -61,7 +58,7 @@ func getStateKey(actionBody *port.ActionBody) string {
 	if actionBody.Context.Entity != "" {
 		return actionBody.Context.Entity
 	}
-	return "e_" + randomLetters(10)
+	return "e_" + genUUID(16)
 }
 
 // Apply loads main terraform file with backend configured using go template, loads template file for the wanted resource,
@@ -98,7 +95,7 @@ func (t *Terraform) Apply(actionBody *port.ActionBody, ctx context.Context) erro
 	if err != nil {
 		return fmt.Errorf("failed to run terraform init: %v", err)
 	}
-	props := lo.Assign(map[string]any{}, actionBody.Payload.Properties, map[string]any{
+	props := lo.Assign(map[string]any{}, actionBody.Payload.Entity.Properties, actionBody.Payload.Properties, map[string]any{
 		"entity_identifier": stateKey,
 		"blueprint":         actionBody.Context.Blueprint,
 		"run_id":            actionBody.Context.RunID,

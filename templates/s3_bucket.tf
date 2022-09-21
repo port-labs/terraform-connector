@@ -7,10 +7,24 @@ resource "aws_s3_bucket" "bucket" {
     var.tags,
   )
 }
+
+resource "aws_s3_bucket_acl" "example_bucket_acl" {
+  bucket = aws_s3_bucket.bucket.id
+  acl    = var.bucket_acl
+}
+
 resource "port-labs_entity" "bucket" {
   properties {
-    name = "bucket"
+    name = "bucket_name"
     value = aws_s3_bucket.bucket.bucket
+  }
+  properties {
+    name = "bucket_acl"
+    value = var.bucket_acl
+  }
+  properties {
+    name = "tags"
+    value = jsonencode(var.tags)
   }
   properties {
     name = "url"
@@ -25,6 +39,11 @@ resource "port-labs_entity" "bucket" {
 variable "bucket_name" {
   type = string
   description = "The name of the bucket"
+}
+variable "bucket_acl" {
+  type = string
+  default = "private"
+  description = "The canned ACL of the bucket"
 }
 variable "tags" {
   type = map(string)

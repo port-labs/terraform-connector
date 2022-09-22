@@ -65,7 +65,7 @@ docker run \
   -e AWS_REGION=<AWS_REGION> \
   -e DEBUG=true \
   -p 8080:8080 \
-  -it hedwigz/webhook-terraform:v0.2
+  -it ghcr.io/port-labs/webhook-terraform:v0.2
 ```
 
 Now we have a running server that gets webhook request from Port and applies them to terraform files!  
